@@ -37,6 +37,19 @@ find_open() {  # $1 = regex to match against issue titles
         --jq "[.[] | select(.title|test(\"$1\"))][0].number" 2>/dev/null
 }
 
+# Assign new issues to the repo owner so they always get notified/emailed,
+# regardless of their repo "watch" setting. GITHUB_REPOSITORY_OWNER is provided
+# automatically by Actions; empty when running locally (then we just skip it).
+owner="${GITHUB_REPOSITORY_OWNER:-}"
+create_issue() {  # $1 = title  -> prints the new issue URL
+    if [ -n "$owner" ]; then
+        gh issue create --title "$1" --label "$LABEL" --assignee "$owner" \
+            --body "$body" | tail -n1
+    else
+        gh issue create --title "$1" --label "$LABEL" --body "$body" | tail -n1
+    fi
+}
+
 if [ "$ALERT" = true ]; then
     title="🎟️ Dampfloktage: tickets may be on sale"
     existing="$(find_open 'may be on sale')"
@@ -45,9 +58,7 @@ if [ "$ALERT" = true ]; then
         gh issue reopen "$existing" 2>/dev/null || true
         echo "commented on on-sale issue #$existing"
     else
-        n="$(gh issue create --title "$title" --label "$LABEL" --body "$body" \
-             | tail -n1)"
-        echo "opened on-sale issue: $n"
+        echo "opened on-sale issue: $(create_issue "$title")"
     fi
 else
     title="🔔 Dampfloktage: ticket info changed"
@@ -56,8 +67,6 @@ else
         gh issue comment "$existing" --body "$body"
         echo "commented on change issue #$existing"
     else
-        n="$(gh issue create --title "$title" --label "$LABEL" --body "$body" \
-             | tail -n1)"
-        echo "opened change issue: $n"
+        echo "opened change issue: $(create_issue "$title")"
     fi
 fi
