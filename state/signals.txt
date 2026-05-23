@@ -1,0 +1,11 @@
+status=coming_soon
+has_coming=True
+has_onsale_text=False
+has_sold_out=False
+has_vendor_link=False
+has_external_buy_button=False
+has_internal_ticket_link=False
+has_vorverkauf=False
+price_near_ticket=False
+relevant_links=0
+content_lines=113
