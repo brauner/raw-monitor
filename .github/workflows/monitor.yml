@@ -1,0 +1,72 @@
+name: Watch Dampfloktage tickets
+
+# Monitors the Meiningen "Dampfloktage" event page and alerts (via a GitHub
+# issue) when the page changes and, especially, when tickets become buyable.
+
+on:
+  schedule:
+    # Hourly, at :23 (off-the-hour to dodge the top-of-hour scheduling rush,
+    # which GitHub may delay/drop). Tune to taste, e.g. '23 */3 * * *'.
+    - cron: "23 * * * *"
+  workflow_dispatch: {}   # manual "Run workflow" button
+
+# Least privilege: commit the snapshot + open issues, nothing else.
+permissions:
+  contents: write
+  issues: write
+
+# Never let two runs (e.g. schedule + manual) fight over the push.
+concurrency:
+  group: dampfloktage-monitor
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the page
+        id: check
+        env:
+          URL: https://meiningen.de/events-veranstaltung/dampfloktage
+        run: bash scripts/check.sh
+
+      - name: Commit snapshot
+        if: steps.check.outputs.changed == 'true' || steps.check.outputs.heartbeat_due == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name  "dampfloktage-monitor[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A state/
+          if git diff --cached --quiet; then
+            echo "nothing to commit"; exit 0
+          fi
+          if [ "${{ steps.check.outputs.ticket_alert }}" = "true" ]; then
+            msg="watch: 🎟️ tickets ${{ steps.check.outputs.status }} (was ${{ steps.check.outputs.prev_status }})"
+          elif [ "${{ steps.check.outputs.changed }}" = "true" ]; then
+            msg="watch: page changed (status=${{ steps.check.outputs.status }})"
+          else
+            msg="chore: heartbeat (${{ steps.check.outputs.status }})"
+          fi
+          git commit --no-gpg-sign -m "$msg"
+          for i in 1 2 3; do
+            git push && break
+            echo "push failed, rebasing and retrying ($i)..."
+            git pull --rebase --autostash || true
+            sleep $(( (RANDOM % 5) + 2 ))
+          done
+
+      - name: Notify on ticket change
+        if: steps.check.outputs.ticket_changed == 'true' || steps.check.outputs.ticket_alert == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STATUS: ${{ steps.check.outputs.status }}
+          ALERT: ${{ steps.check.outputs.ticket_alert }}
+          URL: ${{ steps.check.outputs.url }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: bash scripts/alert.sh
+
+      - name: Job summary
+        if: always()
+        run: cat _report.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "no report produced" >> "$GITHUB_STEP_SUMMARY"

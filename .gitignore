@@ -1,0 +1,8 @@
+# Per-run report, regenerated each run; surfaced via job summary / issue body.
+/_report.md
+
+# Local scratch
+*.tmp
+raw.html
+__pycache__/
+.semcode.db/
