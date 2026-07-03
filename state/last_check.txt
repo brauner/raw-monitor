@@ -1,5 +1,5 @@
-last_check=2026-07-02T13:01:52Z
-epoch=1782997312
+last_check=2026-07-03T09:31:25Z
+epoch=1783071085
 http=200
 status=coming_soon
 result=OK
