@@ -8,4 +8,4 @@ has_internal_ticket_link=False
 has_vorverkauf=False
 price_near_ticket=False
 relevant_links=1
-content_lines=129
+content_lines=131
