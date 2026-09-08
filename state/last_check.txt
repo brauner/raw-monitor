@@ -1,5 +1,5 @@
-last_check=2026-09-08T01:02:54Z
-epoch=1788829374
+last_check=2026-09-08T21:24:53Z
+epoch=1788902693
 http=200
 status=on_sale
 result=OK
